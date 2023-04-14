@@ -71,6 +71,8 @@ sds sdsnewlen(const void *init, size_t initlen) {
     // T = O(N)
     if (init) {
         // zmalloc 不初始化所分配的内存
+        // !分配的内存大小为什么是这个样子的呢？
+        // !我觉得应该是吧buff的内存也给分配了，1是为了\0。这样就不用再分配了，直接用就行了，把结构体和buff指向的内存放在一起了
         sh = zmalloc(sizeof(struct sdshdr)+initlen+1);
     } else {
         // zcalloc 将分配的内存全部初始化为 0
@@ -87,6 +89,8 @@ sds sdsnewlen(const void *init, size_t initlen) {
     // 如果有指定初始化内容，将它们复制到 sdshdr 的 buf 中
     // T = O(N)
     if (initlen && init)
+    // !sh->buf是在哪里被初始化的呢？
+    // 为什么使用memcpy而不是strcpy呢？这个是因为strcpy是以\0结尾的只能够处理字符串的幅值，一旦遇到'\0'就结束，而这里的buf存储的内容是字节，所以不能使用strcpy
         memcpy(sh->buf, init, initlen);
     // 以 \0 结尾
     sh->buf[initlen] = '\0';
@@ -558,6 +562,7 @@ sds sdscpy(sds s, const char *t) {
  * The function returns the lenght of the null-terminated string
  * representation stored at 's'. */
 #define SDS_LLSTR_SIZE 21
+// 将long long 的变量转换为字符串，并将字符串存储在 s 中
 int sdsll2str(char *s, long long value) {
     char *p, aux;
     unsigned long long v;
@@ -636,8 +641,9 @@ sds sdsfromlonglong(long long value) {
  * T = O(N^2)
  */
 /* Like sdscatpritf() but gets va_list instead of being variadic. */
+// 将可变参数列表 ap 中的内容以 fmt 的格式写入 sds s 中
 sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
-    va_list cpy;
+    va_list cpy;           // 可变参数列表，将这个内容以fmt的格式写入buf中
     char staticbuf[1024], *buf = staticbuf, *t;
     size_t buflen = strlen(fmt)*2;
 
@@ -656,6 +662,7 @@ sds sdscatvprintf(sds s, const char *fmt, va_list ap) {
         buf[buflen-2] = '\0';
         va_copy(cpy,ap);
         // T = O(N)
+        // vsnprintf() 函数会把格式化的数据写入某个字符串中
         vsnprintf(buf, buflen, fmt, cpy);
         if (buf[buflen-2] != '\0') {
             if (buf != staticbuf) zfree(buf);
@@ -852,8 +859,8 @@ sds sdstrim(sds s, const char *cset) {
     ep = end = s+sdslen(s)-1;
 
     // 修剪, T = O(N^2)
-    while(sp <= end && strchr(cset, *sp)) sp++;
-    while(ep > start && strchr(cset, *ep)) ep--;
+    while(sp <= end && strchr(cset, *sp)) sp++;   // 这行代码的目的是找到第一个不在 cset 中的字符的位置 
+    while(ep > start && strchr(cset, *ep)) ep--;  // 这行代码的目的是找到最后一个不在 cset 中的字符的位置
 
     // 计算 trim 完毕之后剩余的字符串长度
     len = (sp > ep) ? 0 : ((ep-sp)+1);
@@ -904,7 +911,7 @@ void sdsrange(sds s, int start, int end) {
     size_t newlen, len = sdslen(s);
 
     if (len == 0) return;
-    if (start < 0) {
+    if (start < 0) {                          // 负数表示倒数第几个字符
         start = len+start;
         if (start < 0) start = 0;
     }
@@ -916,17 +923,19 @@ void sdsrange(sds s, int start, int end) {
     if (newlen != 0) {
         if (start >= (signed)len) {
             newlen = 0;
-        } else if (end >= (signed)len) {
+        } 
+        else if (end >= (signed)len) {
             end = len-1;
             newlen = (start > end) ? 0 : (end-start)+1;
         }
-    } else {
+    } 
+    else {
         start = 0;
     }
 
     // 如果有需要，对字符串进行移动
     // T = O(N)
-    if (start && newlen) memmove(sh->buf, sh->buf+start, newlen);
+    if (start && newlen) memmove(sh->buf, sh->buf+start, newlen);    // memmove() 与 memcpy() 的区别是，如果源和目标内存区域重叠，memmove() 仍然可以正确处理
 
     // 添加终结符
     sh->buf[newlen] = 0;
@@ -979,14 +988,14 @@ void sdstoupper(sds s) {
  * If two strings share exactly the same prefix, but one of the two has
  * additional characters, the longer string is considered to be greater than
  * the smaller one. */
-int sdscmp(const sds s1, const sds s2) {
+int sdscmp(const sds s1, const sds s2) {   
     size_t l1, l2, minlen;
     int cmp;
 
     l1 = sdslen(s1);
     l2 = sdslen(s2);
     minlen = (l1 < l2) ? l1 : l2;
-    cmp = memcmp(s1,s2,minlen);
+    cmp = memcmp(s1,s2,minlen);      // memcmp() 比较两个内存区域的前 n 个字节
 
     if (cmp == 0) return l1-l2;
 
@@ -1022,7 +1031,7 @@ int sdscmp(const sds s1, const sds s2) {
  *
  * T = O(N^2)
  */
-sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count) {
+sds *sdssplitlen(const char *s, int len, const char *sep, int seplen, int *count) {  
     int elements = 0, slots = 5, start = 0, j;
     sds *tokens;
 

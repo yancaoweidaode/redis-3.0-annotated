@@ -84,7 +84,7 @@ void zlibc_free(void *ptr) {
 } while(0)
 
 #endif
-
+// 用于计算当前已经使用的内存大小，主要是对used_memory的操作
 #define update_zmalloc_stat_alloc(__n) do { \
     size_t _n = (__n); \
     if (_n&(sizeof(long)-1)) _n += sizeof(long)-(_n&(sizeof(long)-1)); \
@@ -117,7 +117,7 @@ static void zmalloc_default_oom(size_t size) {
 }
 
 static void (*zmalloc_oom_handler)(size_t) = zmalloc_default_oom;
-
+// 申请一块内存，并将这块内存的大小存储在分配的内存块的前面
 void *zmalloc(size_t size) {
     void *ptr = malloc(size+PREFIX_SIZE);
 
@@ -126,6 +126,7 @@ void *zmalloc(size_t size) {
     update_zmalloc_stat_alloc(zmalloc_size(ptr));
     return ptr;
 #else
+    // 在这里，我们将分配的内存大小存储在分配的内存块的前面
     *((size_t*)ptr) = size;
     update_zmalloc_stat_alloc(size+PREFIX_SIZE);
     return (char*)ptr+PREFIX_SIZE;
@@ -165,6 +166,7 @@ void *zrealloc(void *ptr, size_t size) {
 #else
     realptr = (char*)ptr-PREFIX_SIZE;
     oldsize = *((size_t*)realptr);
+    // realooc()函数会将原来的内存块的内容拷贝到新的内存块中，并且释放原来的内存块
     newptr = realloc(realptr,size+PREFIX_SIZE);
     if (!newptr) zmalloc_oom_handler(size);
 
@@ -174,7 +176,6 @@ void *zrealloc(void *ptr, size_t size) {
     return (char*)newptr+PREFIX_SIZE;
 #endif
 }
-
 /* Provide zmalloc_size() for systems where this function is not provided by
  * malloc itself, given that in that case we store a header with this
  * information as the first bytes of every allocation. */

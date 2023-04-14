@@ -45,7 +45,7 @@ typedef struct listNode {
     struct listNode *next;
 
     // 节点的值
-    void *value;
+    void *value;            // 为什么要用 void* 呢？因为链表的节点值可以是任意类型的数据
 
 } listNode;
 
@@ -74,8 +74,8 @@ typedef struct list {
     listNode *tail;
 
     // 节点值复制函数
-    void *(*dup)(void *ptr);
-
+    // 这是一个函数指针，指向一个函数，这个函数的返回值是 void*，参数是 void*，这个函数的作用是复制一个节点值，函数指针的名字是 dup
+    void *(*dup)(void *ptr);   
     // 节点值释放函数
     void (*free)(void *ptr);
 

@@ -63,6 +63,7 @@ struct sdshdr {
  * 返回 sds 实际保存的字符串的长度
  *
  * T = O(1)
+ * s表示的应该是sdshdr的buf的地址，通过减去sdshdr的大小，就可以得到sdshdr的地址，但是他为什么要这样写呢？
  */
 static inline size_t sdslen(const sds s) {
     struct sdshdr *sh = (void*)(s-(sizeof(struct sdshdr)));

@@ -58,7 +58,7 @@ list *listCreate(void)
     list->len = 0;
     list->dup = NULL;
     list->free = NULL;
-    list->match = NULL;
+    list->match = NULL;   
 
     return list;
 }
@@ -84,16 +84,16 @@ void listRelease(list *list)
         next = current->next;
 
         // 如果有设置值释放函数，那么调用它
-        if (list->free) list->free(current->value);
+        if (list->free) list->free(current->value);   // 这个是释放节点中的存储的内容
 
         // 释放节点结构
-        zfree(current);
+        zfree(current);                               // 这个是释放节点所占据的内存
 
         current = next;
     }
 
     // 释放链表结构
-    zfree(list);
+    zfree(list);                                      // 这个是释放链表所占据的内存， 综上三次内存的释放释放的是不同的内存，并没有发生重复
 }
 
 /* Add a new node to the list, to head, contaning the specified 'value'
@@ -430,7 +430,7 @@ list *listDup(list *orig)
                 return NULL;
             }
         } else
-            value = node->value;
+            value = node->value;                    // 这应该是浅拷贝
 
         // 将节点添加到链表
         if (listAddNodeTail(copy, value) == NULL) {
@@ -485,7 +485,7 @@ listNode *listSearchKey(list *list, void *key)
                 return node;
             }
         } else {
-            if (key == node->value) {
+            if (key == node->value) {                // 浅拷贝模式下的比较只需要地址相同就可以了
                 listReleaseIterator(iter);
                 // 找到
                 return node;
